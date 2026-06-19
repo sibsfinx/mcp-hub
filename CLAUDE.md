@@ -40,16 +40,17 @@ Environment="PATH=/home/danil/.local/share/mise/shims:/home/danil/.local/bin:/us
 
 Два флага в `mcp_settings.json`:
 - `enabled` — запущен ли сервер в MCPHub (по умолчанию true)
-- `autoload` — регистрировать ли в Claude/Codex CLI при `make claude-install` / `codex-install`
+- `autoload` — регистрировать ли в Claude/Codex/Cursor при `make claude-install` / `codex-install` / `cursor-install`
 
 ```bash
 make servers              # Список серверов с флагами
 make enable  name=X       # Включить сервер в MCPHub + добавить в CLI
 make disable name=X       # Выключить сервер в MCPHub + убрать из CLI
-make attach  name=X       # Установить autoload + зарегистрировать в CLI
-make detach  name=X       # Снять autoload + удалить из CLI
+make attach  name=X       # Установить autoload + зарегистрировать в Claude/Codex/Cursor
+make detach  name=X       # Снять autoload + удалить из Claude/Codex/Cursor
 make claude-install       # Установить только autoload-серверы в Claude CLI
 make codex-install        # Установить только autoload-серверы в Codex CLI
+make cursor-install       # Установить только autoload-серверы в Cursor
 ```
 
 НИКОГДА не редактируй `.claude.json` вручную — `CLAUDE_CONFIG_DIR` может указывать на другой путь.
@@ -60,11 +61,29 @@ make codex-install        # Установить только autoload-серв�
    - ОБЯЗАТЕЛЬНО указать `"args": []` даже если аргументов нет (иначе MCPHub не создаст транспорт)
 2. `make restart`
 3. `make claude-install` или `claude mcp add -s user -t http <имя> "http://localhost:9700/mcp/<имя>"`
+4. `make cursor-install` для добавления в Cursor
 
 ### URL-пути MCPHub
 
-- `/mcp/<group>` — Streamable HTTP (используется Claude Code с `-t http`)
+- `/mcp/<group>` — Streamable HTTP (используется Claude Code с `-t http` и Cursor)
 - `/sse/<group>` — SSE-транспорт (legacy, НЕ использовать)
+
+## Cursor
+
+Cursor хранит MCP конфигурацию в `~/.cursor/mcp.json`. Формат:
+
+```json
+{
+  "mcpServers": {
+    "server-name": {
+      "url": "http://localhost:9700/mcp/server-name"
+    }
+  }
+}
+```
+
+Используй `make cursor-install` для синхронизации — не редактируй файл вручную,
+так как `make cursor-install` перезапишет все серверы хаба.
 
 ### Переменная PORT
 
