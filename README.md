@@ -68,6 +68,7 @@ graph LR
    ```bash
    make claude-install    # установит все серверы в Claude Code
    make codex-install     # установит все серверы в Codex CLI
+   make cursor-install    # установит все серверы в Cursor
    ```
 
 5. Перезапустить сессию клиента (Claude/Codex)
@@ -99,6 +100,7 @@ systemctl --user daemon-reload
 ```bash
 make claude-install
 make codex-install
+make cursor-install
 ```
 
 ### 5. Перезапустить хаб
@@ -126,8 +128,11 @@ make restart
 | `make codex-install` | Установить все MCP серверы в Codex CLI |
 | `make codex-uninstall` | Удалить все MCP серверы из Codex CLI |
 | `make codex-update` | Переустановить все MCP серверы в Codex CLI |
-| `make mcp-install` | Алиас для `make codex-install` |
-| `make mcp-reinstall` | Алиас для `make codex-update` |
+| `make cursor-install` | Установить все MCP серверы в Cursor (`~/.cursor/mcp.json`) |
+| `make cursor-uninstall` | Удалить все MCP серверы из Cursor |
+| `make cursor-update` | Переустановить все MCP серверы в Cursor |
+| `make mcp-install` | Установить MCP серверы во все AI-клиенты |
+| `make mcp-reinstall` | Переустановить MCP серверы во все AI-клиенты |
 | `make install-telegram` | Установить mcp-telegram |
 | `make telegram-sign-in` | Авторизоваться в Telegram |
 
@@ -150,6 +155,7 @@ make restart
    make restart
    make claude-install
    make codex-install
+   make cursor-install
    ```
 
 ## CLI-инструменты

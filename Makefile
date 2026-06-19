@@ -1,4 +1,4 @@
-.PHONY: all install install-deps install-docmost-mcp install-telegram telegram-sign-in start stop restart status logs setup unsetup open help claude-install claude-uninstall claude-update codex-install codex-uninstall codex-update mcp-install mcp-uninstall mcp-reinstall enable disable attach detach servers _vendor_install cli-generate cli-install cli-update skills-install skills-uninstall skills
+.PHONY: all install install-deps install-docmost-mcp install-telegram telegram-sign-in start stop restart status logs setup unsetup open help claude-install claude-uninstall claude-update codex-install codex-uninstall codex-update cursor-install cursor-uninstall cursor-update mcp-install mcp-uninstall mcp-reinstall enable disable attach detach servers _vendor_install cli-generate cli-install cli-update skills-install skills-uninstall skills
 
 SHELL := /bin/bash
 REPO_DIR := $(shell pwd)
@@ -48,13 +48,16 @@ help:
 	@echo "  make codex-install    - Install MCP servers in Codex CLI"
 	@echo "  make codex-uninstall  - Remove MCP servers from Codex CLI"
 	@echo "  make codex-update     - Reinstall MCP servers in Codex CLI"
-	@echo "  make mcp-install      - Alias for make codex-install"
-	@echo "  make mcp-reinstall    - Alias for make codex-update"
+	@echo "  make cursor-install   - Install MCP servers in Cursor (~/.cursor/mcp.json)"
+	@echo "  make cursor-uninstall - Remove MCP servers from Cursor"
+	@echo "  make cursor-update    - Reinstall MCP servers in Cursor"
+	@echo "  make mcp-install      - Install MCP servers in all AI clients"
+	@echo "  make mcp-reinstall    - Reinstall MCP servers in all AI clients"
 	@echo "  make servers          - List all MCP servers with status"
-	@echo "  make enable  name=X   - Enable server X (MCPHub + Claude CLI)"
-	@echo "  make disable name=X   - Disable server X (MCPHub + Claude CLI)"
-	@echo "  make attach  name=X   - Set autoload + register in Claude/Codex CLI"
-	@echo "  make detach  name=X   - Unset autoload + remove from Claude/Codex CLI"
+	@echo "  make enable  name=X   - Enable server X (MCPHub + Claude CLI + Cursor)"
+	@echo "  make disable name=X   - Disable server X (MCPHub + Claude CLI + Cursor)"
+	@echo "  make attach  name=X   - Set autoload + register in Claude/Codex/Cursor"
+	@echo "  make detach  name=X   - Unset autoload + remove from Claude/Codex/Cursor"
 	@echo "  make cli-generate     - Generate CLI wrappers for all enabled MCP servers"
 	@echo "  make cli-install      - Generate + install CLIs to ~/.local/bin/"
 	@echo "  make cli-update       - Regenerate and reinstall all CLIs"
@@ -261,6 +264,15 @@ attach:
 		codex mcp add "$(name)" --url "http://localhost:$$PORT/mcp/$(name)" \
 			&& echo "  Codex CLI: added" \
 			|| echo "  Codex CLI: failed"; \
+	fi; \
+	CURSOR_CONFIG="$$HOME/.cursor/mcp.json"; \
+	if [ -d "$$HOME/.cursor" ] || mkdir -p "$$HOME/.cursor"; then \
+		if [ ! -f "$$CURSOR_CONFIG" ]; then echo '{"mcpServers":{}}' > "$$CURSOR_CONFIG"; fi; \
+		jq --arg n "$(name)" 'del(.mcpServers[$$n])' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG"; \
+		jq --arg n "$(name)" --arg url "http://localhost:$$PORT/mcp/$(name)" \
+			'.mcpServers[$$n] = {"url": $$url}' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG" \
+			&& echo "  Cursor: added" \
+			|| echo "  Cursor: failed"; \
 	fi
 
 detach:
@@ -278,15 +290,23 @@ detach:
 		codex mcp remove "$(name)" \
 			&& echo "  Codex CLI: removed" \
 			|| echo "  Codex CLI: failed"; \
+	fi; \
+	CURSOR_CONFIG="$$HOME/.cursor/mcp.json"; \
+	if [ -f "$$CURSOR_CONFIG" ]; then \
+		jq --arg n "$(name)" 'del(.mcpServers[$$n])' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG" \
+			&& echo "  Cursor: removed" \
+			|| echo "  Cursor: failed"; \
 	fi
 
 claude-update: claude-uninstall claude-install
 
 codex-update: codex-uninstall codex-install
 
-mcp-install: claude-install codex-install
-mcp-uninstall: claude-uninstall codex-uninstall
-mcp-reinstall: claude-update codex-update
+cursor-update: cursor-uninstall cursor-install
+
+mcp-install: claude-install codex-install cursor-install
+mcp-uninstall: claude-uninstall codex-uninstall cursor-uninstall
+mcp-reinstall: claude-update codex-update cursor-update
 
 restart: stop
 	@sleep 1
@@ -380,6 +400,15 @@ enable:
 		claude mcp add -s user -t http "$(name)" "http://localhost:$$PORT/mcp/$(name)" \
 			&& echo "  Claude CLI: added" \
 			|| echo "  Claude CLI: failed"; \
+	fi; \
+	CURSOR_CONFIG="$$HOME/.cursor/mcp.json"; \
+	if [ -d "$$HOME/.cursor" ] || mkdir -p "$$HOME/.cursor"; then \
+		if [ ! -f "$$CURSOR_CONFIG" ]; then echo '{"mcpServers":{}}' > "$$CURSOR_CONFIG"; fi; \
+		jq --arg n "$(name)" 'del(.mcpServers[$$n])' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG"; \
+		jq --arg n "$(name)" --arg url "http://localhost:$$PORT/mcp/$(name)" \
+			'.mcpServers[$$n] = {"url": $$url}' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG" \
+			&& echo "  Cursor: added" \
+			|| echo "  Cursor: failed"; \
 	fi
 
 disable:
@@ -398,6 +427,12 @@ disable:
 		claude mcp remove -s user "$(name)" \
 			&& echo "  Claude CLI: removed" \
 			|| echo "  Claude CLI: failed"; \
+	fi; \
+	CURSOR_CONFIG="$$HOME/.cursor/mcp.json"; \
+	if [ -f "$$CURSOR_CONFIG" ]; then \
+		jq --arg n "$(name)" 'del(.mcpServers[$$n])' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG" \
+			&& echo "  Cursor: removed" \
+			|| echo "  Cursor: failed"; \
 	fi
 
 claude-install:
@@ -445,6 +480,33 @@ codex-uninstall:
 		codex mcp remove "$$name" || true; \
 	done
 	@echo "All MCP servers removed from Codex CLI."
+
+cursor-install:
+	@command -v jq >/dev/null 2>&1 || { echo "Error: jq not found"; exit 1; }
+	@source .env 2>/dev/null || true; \
+	PORT=$${MCPHUB_PORT:-9700}; \
+	CURSOR_CONFIG="$$HOME/.cursor/mcp.json"; \
+	mkdir -p "$$HOME/.cursor"; \
+	if [ ! -f "$$CURSOR_CONFIG" ]; then echo '{"mcpServers":{}}' > "$$CURSOR_CONFIG"; fi; \
+	for name in $$(jq -r '.mcpServers | keys[]' mcp_settings.json); do \
+		jq --arg n "$$name" 'del(.mcpServers[$$n])' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG"; \
+	done; \
+	for name in $$(jq -r '.mcpServers | to_entries[] | select(.value.enabled != false and .value.autoload == true) | .key' mcp_settings.json); do \
+		echo "Installing $$name..."; \
+		jq --arg n "$$name" --arg url "http://localhost:$$PORT/mcp/$$name" \
+			'.mcpServers[$$n] = {"url": $$url}' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG"; \
+	done
+	@echo "All autoload MCP servers synced in Cursor."
+
+cursor-uninstall:
+	@command -v jq >/dev/null 2>&1 || { echo "Error: jq not found"; exit 1; }
+	@CURSOR_CONFIG="$$HOME/.cursor/mcp.json"; \
+	if [ ! -f "$$CURSOR_CONFIG" ]; then echo "Cursor config not found, nothing to remove."; exit 0; fi; \
+	for name in $$(jq -r '.mcpServers | keys[]' mcp_settings.json); do \
+		echo "Removing $$name..."; \
+		jq --arg n "$$name" 'del(.mcpServers[$$n])' "$$CURSOR_CONFIG" > "$$CURSOR_CONFIG.tmp" && mv "$$CURSOR_CONFIG.tmp" "$$CURSOR_CONFIG"; \
+	done
+	@echo "All MCP servers removed from Cursor."
 
 # --- CLI generation via mcporter ---
 
